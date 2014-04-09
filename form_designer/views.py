@@ -6,6 +6,7 @@ from django.conf import settings
 from form_designer import settings as app_settings
 from django.contrib import messages
 from django.core.context_processors import csrf
+from django.middleware.csrf import get_token
 
 import os
 import random
@@ -17,6 +18,10 @@ from form_designer.uploads import handle_uploaded_files
 
 
 def process_form(request, form_definition, extra_context={}, disable_redirection=False):
+    # Call get_token here to ensure that django knows to set csrf cookie which
+    # sometimes seems to be missing for first request.
+    csrf_token = get_token(request)
+
     context = extra_context
     success_message = form_definition.success_message or _('Thank you, the data was submitted successfully.')
     error_message = form_definition.error_message or _('The data could not be submitted, please try again.')
@@ -63,11 +68,11 @@ def process_form(request, form_definition, extra_context={}, disable_redirection
         'form_definition': form_definition
     })
     context.update(csrf(request))
-    
+
     if form_definition.display_logged:
         logs = form_definition.logs.all().order_by('created')
         context.update({'logs': logs})
-        
+
     return context
 
 def _form_detail_view(request, form_definition):
@@ -82,8 +87,8 @@ def _form_detail_view(request, form_definition):
 
 def detail(request, object_name):
     form_definition = get_object_or_404(FormDefinition, name=object_name, require_hash=False)
-    return _form_detail_view(request, form_definition) 
+    return _form_detail_view(request, form_definition)
 
 def detail_by_hash(request, public_hash):
     form_definition = get_object_or_404(FormDefinition, public_hash=public_hash)
-    return _form_detail_view(request, form_definition) 
+    return _form_detail_view(request, form_definition)
